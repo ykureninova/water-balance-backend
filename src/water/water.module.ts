@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { WaterController } from './water.controller';
 import { WaterService } from './water.service';
-import { Water } from './water.entity';
-import { UserModule } from '../user/user.module';
+import { Water, WaterSchema } from './water.schema';
+import { User, UserSchema } from '../user/user.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Water]),
-    UserModule,                        
+    MongooseModule.forFeature([
+      { name: Water.name, schema: WaterSchema },
+      { name: User.name, schema: UserSchema }, // ✅ добавляем UserModel
+    ]),
   ],
   controllers: [WaterController],
   providers: [WaterService],

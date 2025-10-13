@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 
 @Controller('user')
@@ -9,7 +9,14 @@ export class UserController {
   createUser(
     @Body() body: { username: string; password: string; weight?: number; height?: number; waterNorm?: number }
   ) {
-    // Передаем все поля, включая обязательный password
+    if (
+      body.weight === undefined ||
+      body.height === undefined ||
+      body.waterNorm === undefined
+    ) {
+      throw new BadRequestException('Weight, height and waterNorm are required');
+    }
+
     return this.userService.createUser({
       username: body.username,
       password: body.password,
@@ -21,7 +28,7 @@ export class UserController {
 
   @Get(':id')
   getUser(@Param('id') id: string) {
-    return this.userService.getUser(Number(id));
+    return this.userService.getUser(id);
   }
 
   @Get()

@@ -1,43 +1,37 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from './user.schema';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(User)
-    private userRepo: Repository<User>,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  // Создание пользователя
   async createUser(data: {
     username: string;
     password: string;
     weight: number;
     height: number;
     waterNorm: number;
-  }) {
-    // Проверка, есть ли уже такой username
-    const existing = await this.findByUsername(data.username);
-    if (existing) {
-      throw new Error('Username already exists');
-    }
+  }): Promise<UserDocument> {
+    const existing = await this.userModel.findOne({ username: data.username }).exec();
+    if (existing) throw new ConflictException('Username already exists');
 
-    const user = this.userRepo.create(data);
-    return this.userRepo.save(user);
+    const user = new this.userModel(data);
+    return user.save();
   }
 
-  // Поиск пользователя по username
-  async findByUsername(username: string) {
-    return this.userRepo.findOneBy({ username });
+  async findByUsername(username: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ username }).exec();
   }
 
-  async getUser(id: number) {
-    return this.userRepo.findOneBy({ id });
+  async getUser(id: string): Promise<UserDocument> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
-  async getAllUsers() {
-    return this.userRepo.find();
+  async getAllUsers(): Promise<UserDocument[]> {
+    return this.userModel.find().exec();
   }
 }

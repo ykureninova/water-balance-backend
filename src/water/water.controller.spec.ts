@@ -1,18 +1,46 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { WaterController } from './water.controller';
+import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { WaterService } from './water.service';
 
-describe('WaterController', () => {
-  let controller: WaterController;
+@Controller('water')
+export class WaterController {
+  constructor(private waterService: WaterService) {}
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [WaterController],
-    }).compile();
+  @UseGuards(AuthGuard('jwt'))
+  @Post('add')
+  async addPortion(@Request() req, @Body() body: { amount: number }) {
+    return this.waterService.addPortion(req.user.userId, body.amount);
+  }
 
-    controller = module.get<WaterController>(WaterController);
-  });
+  @UseGuards(AuthGuard('jwt'))
+  @Get('user/me')
+  async getUserWater(@Request() req) {
+    return this.waterService.getUserWater(req.user.userId);
+  }
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-});
+  @UseGuards(AuthGuard('jwt'))
+  @Get('user/me/daily-total')
+  async getDailyTotal(@Request() req) {
+    const userId = req.user.userId;
+    const total = await this.waterService.getDailyTotal(userId);
+    const norm = await this.waterService.getUserDailyNorm(userId);
+    return {
+      totalConsumed: total,
+      dailyNorm: norm,
+      remaining: norm - total,
+    };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('user/me/monthly-total')
+  async getMonthlyTotal(@Request() req) {
+    const userId = req.user.userId;
+    const total = await this.waterService.getMonthlyTotal(userId);
+    const norm = await this.waterService.getUserMonthlyNorm(userId);
+    return {
+      totalConsumed: total,
+      monthlyNorm: norm,
+      remaining: norm - total,
+    };
+  }
+}

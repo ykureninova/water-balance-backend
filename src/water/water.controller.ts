@@ -6,7 +6,6 @@ import { WaterService } from './water.service';
 export class WaterController {
   constructor(private waterService: WaterService) {}
 
-  // Добавить порцию воды (только для авторизованного пользователя)
   @UseGuards(AuthGuard('jwt'))
   @Post('add')
   async addPortion(@Request() req, @Body() body: { amount: number }) {
@@ -14,7 +13,6 @@ export class WaterController {
     return this.waterService.addPortion(userId, body.amount);
   }
 
-  // Все порции текущего пользователя
   @UseGuards(AuthGuard('jwt'))
   @Get('user/me')
   async getUserWater(@Request() req) {
@@ -22,7 +20,6 @@ export class WaterController {
     return this.waterService.getUserWater(userId);
   }
 
-  // Дневной баланс текущего пользователя
   @UseGuards(AuthGuard('jwt'))
   @Get('user/me/daily-total')
   async getDailyTotal(@Request() req) {
@@ -36,7 +33,6 @@ export class WaterController {
     };
   }
 
-  // Месячный баланс текущего пользователя
   @UseGuards(AuthGuard('jwt'))
   @Get('user/me/monthly-total')
   async getMonthlyTotal(@Request() req) {
