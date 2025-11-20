@@ -5,14 +5,16 @@ import { UserModule } from '../user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
     UserModule,
     PassportModule,
+    EventEmitterModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'secretKey', // секрет для подписи токена
-      signOptions: { expiresIn: '1d' }, // токен действителен 1 день
+      secret: process.env.JWT_SECRET || 'secretKey',
+      signOptions: { expiresIn: '1d' },
     }),
   ],
   providers: [AuthService, JwtStrategy],

@@ -11,6 +11,9 @@ export class Water {
 
   @Prop({ required: true })
   amount: number;
+
+  @Prop({ default: false })
+  isCaffeinated: boolean;
 }
 
 export const WaterSchema = SchemaFactory.createForClass(Water);

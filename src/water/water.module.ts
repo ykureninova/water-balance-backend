@@ -4,13 +4,15 @@ import { WaterController } from './water.controller';
 import { WaterService } from './water.service';
 import { Water, WaterSchema } from './water.schema';
 import { User, UserSchema } from '../user/user.schema';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Water.name, schema: WaterSchema },
-      { name: User.name, schema: UserSchema }, // ✅ добавляем UserModel
+      { name: User.name, schema: UserSchema },
     ]),
+    EventsModule,
   ],
   controllers: [WaterController],
   providers: [WaterService],

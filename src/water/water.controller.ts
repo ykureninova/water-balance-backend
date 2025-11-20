@@ -8,9 +8,10 @@ export class WaterController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('add')
-  async addPortion(@Request() req, @Body() body: { amount: number }) {
+  async addPortion(@Request() req, @Body() body: { amount: number; isCaffeinated?: boolean }) {
     const userId = req.user.userId;
-    return this.waterService.addPortion(userId, body.amount);
+    const isCaffeinated = body.isCaffeinated || false;
+    return this.waterService.addPortion(userId, body.amount, isCaffeinated);
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -29,7 +30,7 @@ export class WaterController {
     return {
       totalConsumed: total,
       dailyNorm: norm,
-      remaining: norm - total,
+      remaining: Math.max(0, norm - total),
     };
   }
 
@@ -42,7 +43,7 @@ export class WaterController {
     return {
       totalConsumed: total,
       monthlyNorm: norm,
-      remaining: norm - total,
+      remaining: Math.max(0, norm - total),
     };
   }
 }
