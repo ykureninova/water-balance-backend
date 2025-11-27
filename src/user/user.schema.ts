@@ -8,16 +8,25 @@ export class User {
   @Prop({ required: true, unique: true })
   username: string;
 
+  @Prop({ required: false, unique: true, sparse: true })
+  email: string;
+
   @Prop({ required: true })
   password: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false, enum: ['male', 'female'], default: 'female' })
+  gender: string;
+
+  @Prop({ required: false })
   weight: number;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   height: number;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
+  activity: number;
+
+  @Prop({ required: true, default: 2000 })
   waterNorm: number;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Water' }] })

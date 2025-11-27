@@ -10,9 +10,10 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // Проверка пользователя по username и password
-  async validateUser(username: string, password: string) {
-    const user: any = await this.userService.findByUsername(username);
+  // usernameOrEmail + password
+  async validateUser(identifier: string, password: string) {
+    const user: any =
+      (await this.userService.findByUsernameOrEmail(identifier)) || null;
     if (!user) return null;
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -21,9 +22,11 @@ export class AuthService {
     return user;
   }
 
-  // Создание JWT
   async login(user: any) {
-    const payload = { username: user.username, userId: user._id };
+    const payload = {
+      username: user.username,
+      userId: user._id,
+    };
     return { access_token: this.jwtService.sign(payload) };
   }
 }

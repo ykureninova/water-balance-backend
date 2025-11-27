@@ -1,48 +1,75 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Request,
+  Query,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WaterService } from './water.service';
+import { AchievementService } from '../achievement/achievement.service';
 
 @Controller('water')
 export class WaterController {
-  constructor(private waterService: WaterService) {}
+  constructor(
+    private waterService: WaterService,
+    private achievementService: AchievementService,
+  ) {}
 
   @UseGuards(AuthGuard('jwt'))
   @Post('add')
-  async addPortion(@Request() req, @Body() body: { amount: number }) {
-    const userId = req.user.userId;
-    return this.waterService.addPortion(userId, body.amount);
+  async addPortion(
+    @Request() req,
+    @Body() body: { amount: number; drinkType: string },
+  ) {
+    console.log('ADD DRINK BODY:', body);
+    console.log('USER:', req.user);
+
+    // 1. Збираємо ачивки ДО
+    const before = await this.achievementService.getUserAchievements(
+      req.user.userId,
+    );
+
+    // 2. Зберігаємо воду
+    const saved = await this.waterService.addPortion(
+      req.user.userId,
+      body.amount,
+      body.drinkType,
+    );
+
+    // 3. Запускаємо нарахування ачивок
+    await this.achievementService.checkOnWaterAdd(req.user.userId);
+
+    // 4. Ачивки ПІСЛЯ
+    const after = await this.achievementService.getUserAchievements(
+      req.user.userId,
+    );
+
+    // 5. Нові ачивки
+    const newOnes = after.filter(
+      (a) => !before.some((b) => b.code === a.code),
+    );
+
+    return {
+      saved,
+      newAchievements: newOnes,
+    };
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('user/me')
   async getUserWater(@Request() req) {
-    const userId = req.user.userId;
-    return this.waterService.getUserWater(userId);
+    return this.waterService.getUserWater(req.user.userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
-  @Get('user/me/daily-total')
-  async getDailyTotal(@Request() req) {
-    const userId = req.user.userId;
-    const total = await this.waterService.getDailyTotal(userId);
-    const norm = await this.waterService.getUserDailyNorm(userId);
-    return {
-      totalConsumed: total,
-      dailyNorm: norm,
-      remaining: norm - total,
-    };
-  }
-
-  @UseGuards(AuthGuard('jwt'))
-  @Get('user/me/monthly-total')
-  async getMonthlyTotal(@Request() req) {
-    const userId = req.user.userId;
-    const total = await this.waterService.getMonthlyTotal(userId);
-    const norm = await this.waterService.getUserMonthlyNorm(userId);
-    return {
-      totalConsumed: total,
-      monthlyNorm: norm,
-      remaining: norm - total,
-    };
+  @Get('user/me/stats')
+  async getStats(
+    @Request() req,
+    @Query('range') range: 'd' | 'w' | 'm' | 'y' = 'd',
+  ) {
+    return this.waterService.getStats(req.user.userId, range);
   }
 }

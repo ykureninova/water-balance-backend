@@ -1,4 +1,9 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { AuthDto } from './auth.dto';
@@ -12,45 +17,41 @@ export class AuthController {
     private readonly userService: UserService,
   ) {}
 
-  // Регистрация пользователя
+  // Реєстрація
   @Post('register')
   async register(@Body() dto: AuthDto) {
-    // Проверка обязательных полей
-    if (
-      !dto.username ||
-      !dto.password ||
-      dto.weight === undefined ||
-      dto.height === undefined ||
-      dto.waterNorm === undefined
-    ) {
-      throw new BadRequestException('All fields are required');
+    if (!dto.username || !dto.password) {
+      throw new BadRequestException('Username and password are required');
     }
 
-    // Хэшируем пароль
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // Создаем пользователя
-    const user = await this.userService.createUser({
+    const user = (await this.userService.createUser({
       username: dto.username,
+      email: dto.email,
       password: hashedPassword,
+      gender: dto.gender,
       weight: dto.weight,
       height: dto.height,
+      activity: dto.activity,
       waterNorm: dto.waterNorm,
-    });
+    })) as UserDocument;
 
-    // ✅ Исправленная проблемная строка
-    const userDoc = user as UserDocument; // явное приведение типа
-   return { message: 'User registered', userId: (user as any)._id.toString() };
+    // одразу логінимо — повертаємо токен
+    return this.authService.login(user);
   }
 
-  // Логин пользователя
+  // Логін
   @Post('login')
   async login(@Body() dto: AuthDto) {
     if (!dto.username || !dto.password) {
       throw new BadRequestException('Username and password are required');
     }
 
-    const user = await this.authService.validateUser(dto.username, dto.password);
+    const user = await this.authService.validateUser(
+      dto.username,
+      dto.password,
+    );
     if (!user) return { message: 'Invalid credentials' };
 
     return this.authService.login(user);

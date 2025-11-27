@@ -1,7 +1,13 @@
 export class AuthDto {
   username: string;
+  email?: string;
+
   password: string;
-  weight: number;
-  height: number;
-  waterNorm: number;
+
+  gender?: 'male' | 'female';
+  weight?: number;
+  height?: number;
+  activity?: number;
+
+  waterNorm?: number;
 }
