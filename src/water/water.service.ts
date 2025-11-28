@@ -46,8 +46,8 @@ export class WaterService {
       .populate('drinkType');
   }
 
-
-  // GLOBAL DAILY AVERAGE (for all time)
+ 
+  // GLOBAL DAILY AVERAGE (ALL TIME)
   private async computeGlobalDailyAverage(userId: string): Promise<number> {
     const all = await this.waterModel.find({
       user: new Types.ObjectId(userId),
@@ -58,7 +58,7 @@ export class WaterService {
     const map: Record<string, number> = {};
 
     for (const w of all) {
-      const d = w.createdAt;
+      const d = new Date(w.createdAt);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (!map[key]) map[key] = 0;
       map[key] += w.amount;
@@ -74,7 +74,30 @@ export class WaterService {
   }
 
 
-  // STATS — range graph + global daily average
+  // GLOBAL DAILY RECORD (MAX DAY TOTAL IN USER HISTORY)
+  private async computeGlobalDailyRecord(userId: string): Promise<number> {
+    const all = await this.waterModel.find({
+      user: new Types.ObjectId(userId),
+    });
+
+    if (!all.length) return 0;
+
+    const map: Record<string, number> = {};
+
+    for (const w of all) {
+      const d = new Date(w.createdAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+      if (!map[key]) map[key] = 0;
+      map[key] += w.amount;
+    }
+
+    const totals = Object.values(map);
+    return totals.length ? Math.max(...totals) : 0;
+  }
+
+
+  // STATS — RANGE GRAPH + GLOBAL DAILY AVERAGE + GLOBAL DAILY RECORD
   async getStats(userId: string, range: 'd' | 'w' | 'm' | 'y') {
     const now = new Date();
     let start = new Date();
@@ -84,14 +107,14 @@ export class WaterService {
 
     const weekNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    // DAY — 24 hours
+    // DAY
     if (range === 'd') {
       start.setHours(0, 0, 0, 0);
       keys = Array.from({ length: 24 }, (_, i) => String(i));
       labels = keys;
     }
 
-    // WEEK — 7 days
+    // WEEK
     if (range === 'w') {
       const day = now.getDay();
       const diff = day === 0 ? 6 : day - 1;
@@ -105,10 +128,13 @@ export class WaterService {
         return d;
       });
 
-      keys = tmp.map((d) => d.toISOString().slice(0, 10));
-      labels = tmp.map(
-        (d) => weekNames[d.getDay() === 0 ? 6 : d.getDay() - 1],
+      keys = tmp.map((d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+          d.getDate(),
+        ).padStart(2, '0')}`,
       );
+
+      labels = tmp.map((d) => weekNames[d.getDay() === 0 ? 6 : d.getDay() - 1]);
     }
 
     // MONTH
@@ -124,7 +150,10 @@ export class WaterService {
       keys = Array.from({ length: days }, (_, i) => {
         const d = new Date(start);
         d.setDate(i + 1);
-        return d.toISOString().slice(0, 10);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+          2,
+          '0',
+        )}-${String(d.getDate()).padStart(2, '0')}`;
       });
 
       labels = keys;
@@ -141,8 +170,7 @@ export class WaterService {
       labels = keys;
     }
 
-
-    // LOAD WATER FOR RANGE
+    // LOAD WATER
     const items = await this.waterModel.find({
       user: new Types.ObjectId(userId),
       createdAt: { $gte: start },
@@ -151,30 +179,37 @@ export class WaterService {
     const map: Record<string, number> = {};
 
     for (const w of items) {
-      const iso = w.createdAt.toISOString();
+      const d = new Date(w.createdAt);
+
+      const keyDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        '0',
+      )}-${String(d.getDate()).padStart(2, '0')}`;
+
+      const keyMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        '0',
+      )}`;
 
       let key = '';
-      if (range === 'd') key = String(w.createdAt.getHours());
-      else if (range === 'w' || range === 'm') key = iso.slice(0, 10);
-      else if (range === 'y') key = iso.slice(0, 7);
+
+      if (range === 'd') key = String(d.getHours());
+      else if (range === 'w' || range === 'm') key = keyDay;
+      else if (range === 'y') key = keyMonth;
 
       if (!map[key]) map[key] = 0;
       map[key] += w.amount;
     }
 
+    // GRAPH DATA
     const data = keys.map((k, i) => ({
       h: i + 1,
       ml: map[k] || 0,
     }));
 
-
+    // GLOBALS
     const globalAvg = await this.computeGlobalDailyAverage(userId);
-
-
-    const nonZero = data.filter((p) => p.ml > 0);
-    const record = nonZero.length
-      ? Math.max(...nonZero.map((p) => p.ml))
-      : 0;
+    const globalRecord = await this.computeGlobalDailyRecord(userId);
 
     const label =
       range === 'd'
@@ -190,7 +225,7 @@ export class WaterService {
       labels,
       data,
       average: globalAvg,
-      record,
+      record: globalRecord,
     };
   }
 }
